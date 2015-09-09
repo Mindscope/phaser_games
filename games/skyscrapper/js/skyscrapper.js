@@ -1,11 +1,14 @@
-var background, ground, base, cursors, gameObjects, staticObjects;
+var background, ground, base, cursors, gameObjects, storyPositionArrow;
 var gameObjectsCollisionGroup, staticObjectsCollisionGroup;
+var debugText;
 
 var game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.AUTO, '', {
     preload: function(){
         game.load.image('base', 'assets/base.png');
         game.load.image('story', 'assets/story.png');
         game.load.image('ground', 'assets/ground.png');
+        game.load.image('block', 'assets/block.png');
+        game.load.image('arrow', 'assets/arrow.png');
     },
     create: function(){
         // Start physics
@@ -44,13 +47,16 @@ var game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.AUTO, '
         //this.game.physics.p2.enable([gameObjects, staticObjects]);
 
         // Add buton to drop story
-        var storyButton = this.game.add.button(window.innerWidth - 200, 10, 'smallbutton', dropStory);
-
-        // Add first story
-        dropStory();
+        var storyButton = this.game.add.button(window.innerWidth - 40, 10, 'block', nextMove);
 
         // Input
         cursors = game.input.keyboard.createCursorKeys();
+
+        // DEBUG text
+        debugText = this.game.add.text(16, 16, 'score: 0', { fontSize: '12px', fill: '#000' });
+
+        // Add first story
+        nextMove();
     },
     update: function(){
         // Move base
@@ -62,15 +68,33 @@ var game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.AUTO, '
             base.body.velocity.x = 0;
         }
     },
-    storyCollision: function(previousStory, currentStory){
-        //dropStory();
-    },
     animateCamera: function(){
         // Change target sprite for camera follow
     }
 });
 
-function dropStory() {
-    var story = gameObjects.create(window.innerWidth / 2, 0, 'story');
+function nextMove() {
+    var pos = Math.random() * (window.innerWidth - 230) + 75;
+    var time = Phaser.Timer.SECOND * 2;
 
+    storyPositionArrow = game.add.sprite(pos, 5, 'arrow');
+
+    var tween = game.add.tween(storyPositionArrow);
+    tween.to({ alpha: 0 }, time, Phaser.Easing.Quadratic.In);
+    tween.onComplete.add(function () {
+        console.log("Destroying arrow...");
+        storyPositionArrow.destroy();
+    });
+    tween.start();
+
+    game.time.events.add(time, dropStory, this, pos);
+}
+
+function dropStory(pos) {
+    if (pos == undefined)
+        pos = Math.random() * (window.innerWidth - 230) + 75;
+
+    debugText.text = "xPos: " + pos;
+
+    var story = gameObjects.create(pos, 0, 'story');
 }
