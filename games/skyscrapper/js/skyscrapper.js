@@ -2,7 +2,7 @@ var background, ground, base, cursors, gameObjects, storyPositionArrow, currentS
 var gameObjectsCollisionGroup, staticObjectsCollisionGroup;
 var debugText;
 
-var FRICTION = 100;
+var FRICTION = 150;
 var GRAVITY = 200;
 var BASE_SPEED = 250;
 
@@ -21,6 +21,9 @@ var game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.AUTO, '
         game.physics.p2.gravity.y = GRAVITY;
         game.physics.p2.restitution = 0;
         game.physics.p2.friction = FRICTION;
+
+        gameObjectsCollisionGroup = game.physics.p2.createCollisionGroup();
+        staticObjectsCollisionGroup = game.physics.p2.createCollisionGroup();
 
         // Create Background
         var backgroundHeight = this.game.height * 5;
@@ -45,13 +48,14 @@ var game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.AUTO, '
         gameObjects.enableBody = true;
         gameObjects.physicsBodyType = Phaser.Physics.P2JS;
 
-        gameObjectsCollisionGroup = this.game.physics.p2.createCollisionGroup();
-
         // Create base
         base = gameObjects.create(window.innerWidth / 2, window.innerHeight - 135, 'base');
+        game.physics.p2.enable(base, false);
+        base.body.landed = true;
+        base.body.setRectangle(199, 122);
         base.body.static = true;
         base.body.setCollisionGroup(gameObjectsCollisionGroup);
-        game.physics.p2.enable(base, false);
+        base.body.collides(staticObjectsCollisionGroup);
 
         // Add buton to drop story
         this.game.add.button(window.innerWidth - 40, 10, 'block', nextMove);
@@ -86,11 +90,10 @@ function nextMove() {
 
     storyPositionArrow = game.add.sprite(pos, 5, 'arrow');
 
-    // Animate arrow
+    // Animate arrow and destroy it on animation end
     var tween = game.add.tween(storyPositionArrow);
     tween.to({ alpha: 0 }, time, Phaser.Easing.Quadratic.In);
     tween.onComplete.add(function () {
-        console.log("Destroying arrow...");
         storyPositionArrow.destroy();
     });
     tween.start();
@@ -105,13 +108,32 @@ function dropStory(pos) {
     debugText.text = "xPos: " + pos;
 
     currentStory = gameObjects.create(pos, 0, 'story');
-    currentStory.body.setCollisionGroup(gameObjectsCollisionGroup);
-    currentStory.body.collides(gameObjectsCollisionGroup, storyCollision, this);
-    currentStory.body.data.gravityScale = 10;
+    game.physics.p2.enable(currentStory, false);
+
+    currentStory.body.data.gravityScale = 15;
+    currentStory.body.setRectangle(153, 66);
+    currentStory.body.setCollisionGroup(staticObjectsCollisionGroup);
+    //currentStory.body.collides([staticObjectsCollisionGroup, gameObjectsCollisionGroup], storyCollision, this);
+    currentStory.body.collides([staticObjectsCollisionGroup, gameObjectsCollisionGroup]);
+    //currentStory.body.onBeginContact.add(storyCollision, currentStory);
 
     game.physics.p2.updateBoundsCollisionGroup();
 }
 
-function storyCollision(obj1, obj2) {
-    console.log("Collided");
+/**
+ *
+ *
+ * @param obj1
+ * @param obj2
+ */
+function storyCollision(target) {
+    if (target == null) return;
+
+    console.log(target);
+
+    if (target.sprite.key == "base" || target.sprite.key == "story") {
+        this.body.onBeginContact.remove(storyCollision);
+
+        nextMove();
+    }
 }
